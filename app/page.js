@@ -116,6 +116,32 @@ export default function Home() {
     }
   };
 
+  const handleDeleteTask = async (id) => {
+    setLoading(true); // 削除中はローディング状態に
+    setFetchError(null);
+    try {
+      // Supabaseから指定されたIDのTo-Doを削除
+      const { error } = await supabase
+        .from('todos')
+        .delete()
+        .eq('id', id) // 指定されたIDのレコードをターゲット
+        .eq('user_id', session.user.id); // ★RLSのためにuser_idも条件に含める（必須ではないが安全策）
+
+      if (error) {
+        console.error('Error deleting todo:', error.message);
+        throw new Error(error.message);
+      }
+
+      // UIから削除されたTo-Doを除外
+      setTodos((prevTodos) => prevTodos.filter((todo) => todo.id !== id));
+    } catch (e) {
+      console.error("Failed to delete todo:", e);
+      setFetchError("To-Doの削除に失敗しました。");
+    } finally {
+      setLoading(false); // 削除完了
+    }
+  };
+
   const handleSignOut = async () => {
     setLoading(true); // ログアウト処理中はローディング状態に
     setFetchError(null);
@@ -223,7 +249,23 @@ export default function Home() {
               textDecoration: todo.is_completed ? 'line-through' : 'none',
               color: todo.is_completed ? '#888' : '#333'
             }}>
-              {todo.task} {todo.is_completed && '(完了)'}
+              <span style={{ flexGrow: 1 }}>{todo.task} {todo.is_completed && '(完了)'}</span>
+              <button
+                onClick={() => handleDeleteTask(todo.id)}
+                disabled={loading}
+                style={{
+                  padding: '5px 10px',
+                  backgroundColor: '#f5222d',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  cursor: loading ? 'not-allowed' : 'pointer',
+                  opacity: loading ? 0.7 : 1,
+                  marginLeft: '10px' // ボタンとテキストの間にスペース
+                }}
+              >
+                削除
+              </button>
             </li>
           ))}
         </ul>
